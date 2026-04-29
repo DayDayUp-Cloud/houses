@@ -2,43 +2,39 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>江头锦苑房产价值测算系统</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        /* 让画中画铺满整个屏幕，没有任何边框和滚动条 */
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-        }
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-            display: block;
-        }
-    </style>
+    <title>江头锦苑价值评估入口</title>
 </head>
 <body>
-    <!-- 这是一个画中画（Iframe），我们要往里面塞 A 或者 B -->
-    <iframe id="main-frame" src=""></iframe>
+    <p style="text-align: center; color: #64748b; margin-top: 50px;">正在为您加载最优测算模型...</p>
 
     <script>
-        // 利用浏览器的“会话记忆(sessionStorage)”来记录你刚才是A还是B
+        // 1. 读取浏览器记忆
         var lastPage = sessionStorage.getItem('myCurrentPage');
-        var iframe = document.getElementById('main-frame');
+        var targetPage = '';
 
-        // 如果是第一次打开，或者上一次是 B
+        // 2. 判断这次该显示 A 还是 B
         if (!lastPage || lastPage === 'B') {
-            // 这次就展示 A，并把记忆改成 A
+            targetPage = 'page_a.html';
             sessionStorage.setItem('myCurrentPage', 'A');
-            iframe.src = "./page_a.html";
         } else {
-            // 如果记忆里上一次是 A，刷新时就展示 B，并把记忆改成 B
+            targetPage = 'page_b.html';
             sessionStorage.setItem('myCurrentPage', 'B');
-            iframe.src = "./page_b.html";
         }
+
+        // 3. 【核心黑魔法】去后台拉取代码，并“原地重写”整个网页！
+        // 这样网址绝对不会变，连一点跳转的痕迹都没有！
+        fetch('./' + targetPage)
+            .then(function(response) {
+                return response.text();
+            })
+            .then(function(html) {
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(function(err) {
+                console.error('加载失败:', err);
+            });
     </script>
 </body>
 </html>
