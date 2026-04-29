@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>江头锦苑 · 科学定价套利计算器</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;
+  --gold:#c9a84c;--gold2:#e8c97a;
+  --green:#22c55e;--red:#ef4444;--blue:#60a5fa;
+  --text:#e2e8f0;--muted:#64748b;
+}
+body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh}
+h1{font-size:22px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.sub{font-size:12px;color:var(--muted);letter-spacing:2px;margin-top:4px}
+.header{padding:28px 32px 20px;border-bottom:1px solid rgba(201,168,76,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.badge{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:11px;padding:4px 14px;border-radius:20px;letter-spacing:2px}
+.mode-toggle{display:flex;gap:8px}
+.mode-btn{background:var(--bg3);border:1px solid rgba(255,255,255,.1);color:var(--muted);font-size:12px;padding:6px 16px;border-radius:20px;cursor:pointer;transition:all .2s;letter-spacing:1px}
+.mode-btn.active{background:rgba(201,168,76,.15);border-color:rgba(201,168,76,.4);color:var(--gold)}
+.main{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 90px)}
+.panel{padding:24px;border-right:1px solid rgba(255,255,255,.06)}
+.result-area{padding:24px;overflow-y:auto}
+.form-section{margin-bottom:24px}
+.form-section h3{font-size:12px;color:var(--gold);letter-spacing:3px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid rgba(201,168,76,.15)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:1px}
+.field select,.field input{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.08);color:var(--text);padding:9px 12px;font-size:14px;border-radius:4px;outline:none;transition:border-color .2s;font-family:inherit}
+.field select:focus,.field input:focus{border-color:var(--gold)}
+.field .hint{font-size:11px;color:var(--muted);margin-top:4px}
+.dev-price-section{display:none}
+.dev-price-section.show{display:block}
+.calc-btn{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;border:none;padding:13px;font-size:15px;font-weight:700;letter-spacing:3px;border-radius:4px;cursor:pointer;transition:opacity .2s}
+.calc-btn:hover{opacity:.85}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.r-card{background:var(--bg2);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:18px;text-align:center}
+.r-card .val{font-size:26px;font-weight:800;line-height:1}
+.r-card .lbl{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:1px}
+.pos{color:var(--green)}.neg{color:var(--red)}.neu{color:var(--blue)}
+.breakdown{background:var(--bg2);border:1px solid rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin-bottom:24px}
+.breakdown h3{padding:14px 18px;font-size:12px;color:var(--gold);letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,.06)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 18px;font-size:13px;text-align:left}
+th{color:var(--muted);font-size:11px;letter-spacing:1px;background:rgba(0,0,0,.2)}
+tr:not(:last-child) td{border-bottom:1px solid rgba(255,255,255,.04)}
+.td-val{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.rank-section{background:var(--bg2);border:1px solid rgba(255,255,255,.07);border-radius:6px;overflow:hidden}
+.rank-section h3{padding:14px 18px;font-size:12px;color:var(--gold);letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,.06)}
+.rank-list{max-height:320px;overflow-y:auto}
+.rank-item{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .2s}
+.rank-item:hover{background:rgba(201,168,76,.05)}
+.rank-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.rank-1{background:rgba(201,168,76,.25);color:var(--gold)}
+.rank-2{background:rgba(148,163,184,.15);color:#94a3b8}
+.rank-3{background:rgba(180,120,60,.15);color:#b47c3c}
+.rank-n{background:rgba(255,255,255,.06);color:var(--muted)}
+.rank-info{flex:1}
+.rank-name{font-size:13px;font-weight:600}
+.rank-detail{font-size:11px;color:var(--muted);margin-top:2px}
+.rank-score{font-size:15px;font-weight:800}
+.alert{border-radius:6px;padding:14px 18px;margin-bottom:16px;font-size:13px;line-height:1.7}
+.alert-green{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);color:#86efac}
+.alert-yellow{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);color:#fde047}
+.alert-red{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5}
+.heatmap-wrap{background:var(--bg2);border:1px solid rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin-bottom:24px}
+.heatmap-wrap h3{padding:14px 18px;font-size:12px;color:var(--gold);letter-spacing:3px;border-bottom:1px solid rgba(255,255,255,.06)}
+.heatmap{display:grid;gap:3px;padding:14px 18px}
+.hm-cell{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;cursor:pointer;transition:transform .15s;position:relative}
+.hm-cell:hover{transform:scale(1.15);z-index:10}
+.tooltip{position:fixed;background:var(--bg3);border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:10px 14px;font-size:12px;pointer-events:none;z-index:999;opacity:0;transition:opacity .15s;max-width:200px;line-height:1.7}
+@media(max-width:900px){
+  .main{grid-template-columns:1fr}
+  .panel{border-right:none;border-bottom:1px solid rgba(255,255,255,.06)}
+  .result-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>江头锦苑 · 科学定价套利计算器</h1>
+    <p class="sub">永嘉县三江街道江头社区 · 一房一价科学推算 vs 开发商定价</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-a" onclick="setMode('A')">科学核定价</button>
+      <button class="mode-btn" id="btn-b" onclick="setMode('B')">套利对比</button>
+    </div>
+    <span class="badge" id="mode-badge">模式A · 科学推算</span>
+  </div>
+</div>
+
+<div class="main">
+<div class="panel">
+  <div class="form-section">
+    <h3>选择房源</h3>
+    <div class="field">
+      <label>楼幢</label>
+      <select id="sel-dong" onchange="onDongChange()">
+        <option value="1">1幢</option><option value="2">2幢</option><option value="3">3幢</option>
+        <option value="4">4幢</option><option value="5">5幢</option><option value="6">6幢</option>
+        <option value="7" selected>7幢</option><option value="8">8幢</option><option value="9">9幢</option>
+        <option value="10">10幢</option><option value="11">11幢</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>楼层</label>
+      <select id="sel-floor" onchange="calc()"></select>
+    </div>
+    <div class="field">
+      <label>户型</label>
+      <select id="sel-unit" onchange="calc()">
+        <option value="01">01端套（南+东侧窗）</option>
+        <option value="02">02中套（纯南向）</option>
+        <option value="03">03中套（纯南向）</option>
+        <option value="04">04端套（南+西侧窗）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>基准参数</h3>
+    <div class="field">
+      <label>科学基准单价（元/㎡）</label>
+      <input type="number" id="base-price" value="18000" onchange="calc()"/>
+      <p class="hint">12层基准价，楼层/楼幢/朝向差叠加于此</p>
+    </div>
+    <div class="field">
+      <label>建筑面积（㎡）</label>
+      <input type="number" id="area" value="89" onchange="calc()"/>
+    </div>
+  </div>
+
+  <div class="form-section dev-price-section" id="dev-section">
+    <h3>开发商定价（模式B）</h3>
+    <div class="field">
+      <label>开发商公布单价（元/㎡）</label>
+      <input type="number" id="dev-price" value="17500" onchange="calc()"/>
+      <p class="hint">输入开发商一房一价表中该房源单价</p>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calc()">计算套利空间</button>
+</div>
+
+<div class="result-area">
+  <div id="alert-box"></div>
+  <div class="result-grid" id="result-cards">
+    <div class="r-card"><div class="val neu" id="r-sci-price">—</div><div class="lbl">科学核定价（元/㎡）</div></div>
+    <div class="r-card"><div class="val neu" id="r-total-diff">—</div><div class="lbl">价差合计（元/㎡）</div></div>
+    <div class="r-card"><div class="val neu" id="r-arb-total">—</div><div class="lbl" id="r-arb-lbl">套利空间（万元）</div></div>
+  </div>
+
+  <div class="breakdown">
+    <h3>价差拆解</h3>
+    <table>
+      <thead><tr><th>项目</th><th>说明</th><th class="td-val">差价（元/㎡）</th></tr></thead>
+      <tbody id="breakdown-body"></tbody>
+    </table>
+  </div>
+
+  <div class="heatmap-wrap">
+    <h3>楼层热力图（当前楼幢 · 点击选择）</h3>
+    <div class="heatmap" id="heatmap"></div>
+  </div>
+
+  <div class="rank-section">
+    <h3>全楼盘套利排行（当前户型）</h3>
+    <div class="rank-list" id="rank-list"></div>
+  </div>
+</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+// 楼层差：6/7幢(2-23层), 8/9幢(2-27层), 其余占位用23层
+const FLOOR_DIFF_23 = {
+  2:-900,3:-700,4:-500,5:-400,6:-300,7:-250,8:-200,
+  9:-150,10:-100,11:-50,12:0,
+  13:-100,14:-50,15:90,16:120,17:150,18:-150,
+  19:210,20:240,21:270,22:300,23:330
+};
+const FLOOR_DIFF_27 = {
+  ...FLOOR_DIFF_23,
+  24:210,25:270,26:240,27:210
+};
+
+// 楼幢最高层
+const MAX_FLOORS = {
+  1:23,2:23,3:23,4:23,5:23,
+  6:23,7:23,8:27,9:27,
+  10:23,11:23
+};
+
+// 楼幢差 [01端套, 02中套, 03中套, 04端套]
+// 6/7/8/9 基于地理分析；其余为占位数据
+const DONG_DIFF = {
+  1:[0,0,0,0],
+  2:[100,80,80,100],
+  3:[150,120,120,130],
+  4:[200,160,160,180],
+  5:[180,140,140,160],
+  6:[200,150,150,180],  // 北区西侧，公园绿地景观+
+  7:[250,200,200,220],  // 北区中部，内院最安静，综合最优
+  8:[100,80,80,90],     // 南区中部，江头路轻度噪音
+  9:[-50,-80,-80,-100], // 南区东侧，中心大道噪音最重
+  10:[-100,-120,-120,-130],
+  11:[50,30,30,40]
+};
+
+// 朝向差 [01端套, 02中套, 03中套, 04端套]
+// 全楼西南朝向：01=南+东侧窗，04=南+西侧窗，02/03=纯南
+const ORIENT_DIFF = [80,-30,-30,50];
+
+const UNIT_IDX = {'01':0,'02':1,'03':2,'04':3};
+
+let MODE = 'A'; // A=科学核定价, B=套利对比
+
+function getFloorDiff(dong, floor) {
+  const table = (dong===8||dong===9) ? FLOOR_DIFF_27 : FLOOR_DIFF_23;
+  return table[floor]||0;
+}
+
+function getDongDiff(dong, unitIdx) {
+  return DONG_DIFF[dong][unitIdx];
+}
+
+function getOrientDiff(unitIdx) {
+  return ORIENT_DIFF[unitIdx];
+}
+
+function getScientificPrice(dong, floor, unit, basePrice) {
+  const ui = UNIT_IDX[unit];
+  return basePrice + getFloorDiff(dong,floor) + getDongDiff(dong,ui) + getOrientDiff(ui);
+}
+
+// ── MODE ──────────────────────────────────────────────
+function setMode(m) {
+  MODE = m;
+  document.getElementById('btn-a').className = 'mode-btn'+(m==='A'?' active':'');
+  document.getElementById('btn-b').className = 'mode-btn'+(m==='B'?' active':'');
+  document.getElementById('mode-badge').textContent = m==='A'?'模式A · 科学推算':'模式B · 套利对比';
+  document.getElementById('dev-section').className = 'form-section dev-price-section'+(m==='B'?' show':'');
+  document.getElementById('r-arb-lbl').textContent = m==='A'?'套利空间（万元）':'洼地空间（万元）';
+  calc();
+}
+
+// ── FLOOR SELECT ──────────────────────────────────────
+function onDongChange() {
+  buildFloorSelect();
+  calc();
+}
+
+function buildFloorSelect() {
+  const dong = parseInt(document.getElementById('sel-dong').value);
+  const maxF = MAX_FLOORS[dong]||23;
+  const sel = document.getElementById('sel-floor');
+  const cur = parseInt(sel.value)||12;
+  sel.innerHTML = '';
+  for (let f=2; f<=maxF; f++) {
+    const o = document.createElement('option');
+    o.value = f;
+    const note = f===12?' (基准)':f===18?' ⚠同9层':f===13?' ⚠同10层':f===14?' ⚠同11层':'';
+    o.textContent = `${f}层${note}`;
+    if (f===cur) o.selected=true;
+    sel.appendChild(o);
+  }
+}
+
+// ── CALC ──────────────────────────────────────────────
+function calc() {
+  const dong = parseInt(document.getElementById('sel-dong').value);
+  const floor = parseInt(document.getElementById('sel-floor').value);
+  const unit = document.getElementById('sel-unit').value;
+  const basePrice = parseFloat(document.getElementById('base-price').value)||18000;
+  const area = parseFloat(document.getElementById('area').value)||89;
+  const devPrice = parseFloat(document.getElementById('dev-price').value)||0;
+
+  const ui = UNIT_IDX[unit];
+  const floorD = getFloorDiff(dong, floor);
+  const dongD = getDongDiff(dong, ui);
+  const orientD = getOrientDiff(ui);
+  const totalDiff = floorD + dongD + orientD;
+  const sciPrice = basePrice + totalDiff;
+
+  // 套利计算
+  let arbPerSqm, arbTotal, arbLabel;
+  if (MODE==='A') {
+    // 模式A：科学价 vs 市场基准（basePrice视为市场参考）
+    arbPerSqm = sciPrice - basePrice; // 相对基准的溢价
+    arbTotal = totalDiff * area;
+    arbLabel = '相对基准溢价';
+  } else {
+    // 模式B：科学价 vs 开发商价，正值=开发商低估=洼地
+    arbPerSqm = sciPrice - devPrice;
+    arbTotal = arbPerSqm * area;
+    arbLabel = '洼地空间';
+  }
+
+  // 更新卡片
+  document.getElementById('r-sci-price').textContent = sciPrice.toLocaleString();
+  document.getElementById('r-sci-price').className = 'val neu';
+  document.getElementById('r-total-diff').textContent = fmt(totalDiff);
+  document.getElementById('r-total-diff').className = 'val '+cls(totalDiff);
+  document.getElementById('r-arb-total').textContent = (arbTotal/10000).toFixed(1)+'万';
+  document.getElementById('r-arb-total').className = 'val '+cls(arbTotal);
+
+  // 拆解表
+  const tbody = document.getElementById('breakdown-body');
+  let rows = `
+    <tr><td>基准价</td><td>12层基准</td><td class="td-val">${basePrice.toLocaleString()}</td></tr>
+    <tr><td>楼层差</td><td>${floor}层</td><td class="td-val ${cls(floorD)}">${fmt(floorD)}</td></tr>
+    <tr><td>楼幢差</td><td>${dong}幢</td><td class="td-val ${cls(dongD)}">${fmt(dongD)}</td></tr>
+    <tr><td>朝向差</td><td>${unit}</td><td class="td-val ${cls(orientD)}">${fmt(orientD)}</td></tr>
+    <tr style="background:rgba(201,168,76,.05)"><td><b>科学核定价</b></td><td></td><td class="td-val"><b>${sciPrice.toLocaleString()}</b></td></tr>`;
+  if (MODE==='B') {
+    rows += `
+    <tr><td>开发商定价</td><td>公布价</td><td class="td-val">${devPrice.toLocaleString()}</td></tr>
+    <tr style="background:rgba(34,197,94,.05)"><td><b>洼地空间/㎡</b></td><td></td><td class="td-val ${cls(arbPerSqm)}"><b>${fmt(arbPerSqm)}</b></td></tr>
+    <tr><td>洼地总额</td><td>${area}㎡</td><td class="td-val ${cls(arbTotal)}"><b>${(arbTotal/10000).toFixed(2)}万</b></td></tr>`;
+  }
+  tbody.innerHTML = rows;
+
+  // 提示
+  const alertBox = document.getElementById('alert-box');
+  let html = '';
+  if (MODE==='B') {
+    if (arbPerSqm > 1000) html = `<div class="alert alert-green">洼地优秀：科学价比开发商定价高 <b>${fmt(arbPerSqm)} 元/㎡</b>，总洼地空间 <b>${(arbTotal/10000).toFixed(1)}万元</b>，强烈推荐。</div>`;
+    else if (arbPerSqm > 0) html = `<div class="alert alert-yellow">轻微洼地：科学价高于开发商定价 <b>${fmt(arbPerSqm)} 元/㎡</b>，可考虑。</div>`;
+    else if (arbPerSqm < -500) html = `<div class="alert alert-red">溢价风险：开发商定价高于科学价 <b>${Math.abs(arbPerSqm).toLocaleString()} 元/㎡</b>，该房源不具备洼地价值。</div>`;
+  }
+  if ([18,13,14].includes(floor)) {
+    const w = {18:'18层定价同9层（-150），忌讳折价，实际居住价值高于定价',13:'13层定价同10层（-100），忌讳折价',14:'14层定价同11层（-50），轻微忌讳折价'};
+    html += `<div class="alert alert-yellow">⚠ 特殊楼层：${w[floor]}</div>`;
+  }
+  if ([6,7,8,9].indexOf(dong)<0) html += `<div class="alert alert-yellow">⚠ ${dong}幢楼幢差为占位数据，待实际分析后调整。</div>`;
+  alertBox.innerHTML = html;
+
+  buildHeatmap(dong, floor, unit, basePrice, devPrice);
+  buildRanking(unit, basePrice, area, devPrice);
+}
+
+function buildHeatmap(dong, selFloor, unit, basePrice, devPrice) {
+  const wrap = document.getElementById('heatmap');
+  wrap.innerHTML = '';
+  const maxF = MAX_FLOORS[dong]||23;
+  const cols = Math.min(6, maxF-1);
+  wrap.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+
+  for (let f=maxF; f>=2; f--) {
+    const sciP = getScientificPrice(dong, f, unit, basePrice);
+    const score = MODE==='A' ? (sciP - basePrice) : (sciP - devPrice);
+    const cell = document.createElement('div');
+    cell.className = 'hm-cell';
+    cell.style.background = arbColor(score);
+    cell.textContent = f;
+    cell.style.color = score>0?'#fff':'#aaa';
+    if (f===selFloor) { cell.style.outline='2px solid var(--gold)'; cell.style.outlineOffset='1px'; }
+    cell.onclick = () => { document.getElementById('sel-floor').value=f; calc(); };
+    cell.onmouseenter = e => showTip(e, `${f}层\n科学价: ${sciP.toLocaleString()}\n${MODE==='B'?'洼地: '+fmt(sciP-devPrice)+'/㎡':'差价: '+fmt(sciP-basePrice)+'/㎡'}`);
+    cell.onmouseleave = hideTip;
+    wrap.appendChild(cell);
+  }
+}
+
+function arbColor(v) {
+  if (v>2000) return 'rgba(34,197,94,.8)';
+  if (v>1000) return 'rgba(34,197,94,.55)';
+  if (v>0)    return 'rgba(34,197,94,.3)';
+  if (v>-500) return 'rgba(239,68,68,.2)';
+  if (v>-1500)return 'rgba(239,68,68,.45)';
+  return 'rgba(239,68,68,.7)';
+}
+
+function buildRanking(unit, basePrice, area, devPrice) {
+  const list = document.getElementById('rank-list');
+  const items = [];
+  for (let d=1; d<=11; d++) {
+    const maxF = MAX_FLOORS[d]||23;
+    for (let f=2; f<=maxF; f++) {
+      const sciP = getScientificPrice(d, f, unit, basePrice);
+      const score = MODE==='A' ? (sciP-basePrice)*area : (sciP-devPrice)*area;
+      items.push({dong:d, floor:f, sciP, score});
+    }
+  }
+  items.sort((a,b)=>b.score-a.score);
+  list.innerHTML = items.slice(0,30).map((it,i)=>{
+    const rc = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+    return `<div class="rank-item" onclick="selectUnit(${it.dong},${it.floor})">
+      <div class="rank-num ${rc}">${i+1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${it.dong}幢 ${it.floor}层 ${unit}</div>
+        <div class="rank-detail">科学价 ${it.sciP.toLocaleString()} 元/㎡</div>
+      </div>
+      <div class="rank-score ${cls(it.score)}">${(it.score/10000).toFixed(1)}万</div>
+    </div>`;
+  }).join('');
+}
+
+function selectUnit(dong, floor) {
+  document.getElementById('sel-dong').value = dong;
+  buildFloorSelect();
+  document.getElementById('sel-floor').value = floor;
+  calc();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showTip(e, text) {
+  const t = document.getElementById('tooltip');
+  t.innerHTML = text.replace(/\n/g,'<br>');
+  t.style.opacity='1';
+  t.style.left=(e.clientX+14)+'px';
+  t.style.top=(e.clientY-10)+'px';
+}
+function hideTip() { document.getElementById('tooltip').style.opacity='0'; }
+document.addEventListener('mousemove', e => {
+  const t = document.getElementById('tooltip');
+  if (t.style.opacity==='1') { t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-10)+'px'; }
+});
+
+function fmt(v) { return (v>=0?'+':'')+v.toLocaleString(); }
+function cls(v) { return v>0?'pos':v<0?'neg':'neu'; }
+
+buildFloorSelect();
+document.getElementById('sel-floor').value = 19;
+calc();
+</script>
+</body>
+</html>
