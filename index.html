@@ -2,53 +2,42 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>江头锦苑价值评估入口</title>
-    <!-- 这个 meta 标签是为了在手机上显示正常 -->
+    <title>江头锦苑房产价值测算系统</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f8fafc;
-            color: #64748b;
+        /* 让画中画铺满整个屏幕，没有任何边框和滚动条 */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            overflow: hidden; 
         }
-        .loading {
-            text-align: center;
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            display: block;
         }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #1463c6;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="loading">
-        <div class="spinner"></div>
-        <p>正在为您分配最优测算节点...</p>
-    </div>
+    <!-- 这是一个画中画（Iframe），我们要往里面塞 A 或者 B -->
+    <iframe id="main-frame" src=""></iframe>
 
     <script>
-        // 核心调度逻辑
-        // 生成一个 0 到 1 之间的随机小数
-        var randomNum = Math.random();
-        
-        // 设定分发比例：这里设为 0.5，意味着 50% 概率去 A，50% 概率去 B
-        // 如果你想让去 A 的人多一点，可以改成 0.7（70% 去 A，30% 去 B）
-        if (randomNum < 0.5) {
-            // window.location.replace 会直接替换当前页面，按浏览器的后退键不会回到这个加载页
-            window.location.replace("page_a.html");
+        // 利用浏览器的“会话记忆(sessionStorage)”来记录你刚才是A还是B
+        var lastPage = sessionStorage.getItem('myCurrentPage');
+        var iframe = document.getElementById('main-frame');
+
+        // 如果是第一次打开，或者上一次是 B
+        if (!lastPage || lastPage === 'B') {
+            // 这次就展示 A，并把记忆改成 A
+            sessionStorage.setItem('myCurrentPage', 'A');
+            iframe.src = "./page_a.html";
         } else {
-            window.location.replace("page_b.html");
+            // 如果记忆里上一次是 A，刷新时就展示 B，并把记忆改成 B
+            sessionStorage.setItem('myCurrentPage', 'B');
+            iframe.src = "./page_b.html";
         }
     </script>
 </body>
