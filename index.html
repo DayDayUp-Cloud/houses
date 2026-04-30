@@ -38,3 +38,22 @@
     </script>
 </body>
 </html>
+.then(function(html) {
+                // 如果 fetch 成功，但返回的是 404 网页（GitHub的默认404）
+                if (html.includes("404") || html.includes("Not Found")) {
+                    throw new Error("文件未找到");
+                }
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(function(err) {
+                console.error('加载失败:', err);
+                // 发生错误时，给用户一个体面的降级显示
+                document.body.innerHTML = `
+                    <div style="text-align: center; margin-top: 100px; color: #ef4444;">
+                        <h3>系统加载异常</h3>
+                        <p>无法获取测算模型 (${targetPage})，请刷新重试或联系管理员。</p>
+                    </div>
+                `;
+            });
