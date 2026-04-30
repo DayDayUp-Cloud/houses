@@ -22,23 +22,11 @@
         }
 
         // 3. 【核心黑魔法】去后台拉取代码，并“原地重写”整个网页！
-        // 这样网址绝对不会变，连一点跳转的痕迹都没有！
         fetch('./' + targetPage)
             .then(function(response) {
                 return response.text();
             })
             .then(function(html) {
-                document.open();
-                document.write(html);
-                document.close();
-            })
-            .catch(function(err) {
-                console.error('加载失败:', err);
-            });
-    </script>
-</body>
-</html>
-.then(function(html) {
                 // 如果 fetch 成功，但返回的是 404 网页（GitHub的默认404）
                 if (html.includes("404") || html.includes("Not Found")) {
                     throw new Error("文件未找到");
@@ -52,8 +40,11 @@
                 // 发生错误时，给用户一个体面的降级显示
                 document.body.innerHTML = `
                     <div style="text-align: center; margin-top: 100px; color: #ef4444;">
-                        <h3>系统加载异常</h3>
-                        <p>无法获取测算模型 (${targetPage})，请刷新重试或联系管理员。</p>
+                        <h3 style="font-size: 24px; margin-bottom: 10px;">系统加载异常</h3>
+                        <p>无法获取测算模型 (目标文件: ${targetPage})<br>请检查该文件是否已成功上传至同级目录。</p>
                     </div>
                 `;
             });
+    </script>
+</body>
+</html>
