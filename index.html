@@ -5,34 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>江头锦苑价值评估入口</title>
     <style>
-        /* 让底层页面和边框消失，伪装成原生页面 */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden; /* 防止出现双重滚动条 */
-            background-color: #f8fafc;
+        /* 消除所有边距，让沙盒完全贴合窗口 */
+        body, html { 
+            margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f8fafc; 
         }
+        
+        /* 核心改动：不再隐藏 iframe，一开始就直接展示！ */
         #app-frame {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: none; /* 加载完再显示，防止闪烁 */
+            width: 100%; height: 100%; border: none;
+            display: block; position: relative; z-index: 2;
         }
-        .loading-text {
-            text-align: center;
-            color: #64748b;
-            margin-top: 50vh;
-            transform: translateY(-50%);
-            font-family: sans-serif;
+        
+        /* 提示语放在底层 (z-index: 1) */
+        #loading-box {
+            position: absolute; top: 40%; left: 0; width: 100%;
+            transform: translateY(-50%); text-align: center; color: #64748b;
+            z-index: 1; font-family: sans-serif;
         }
     </style>
 </head>
 <body>
-    <!-- 过渡动画 -->
-    <div id="loading" class="loading-text">正在为您加载最优测算模型...</div>
+    <!-- 底层提示语 -->
+    <div id="loading-box">
+        <p>正在为您加载最优测算模型...</p>
+        <p style="font-size: 13px; color: #94a3b8; margin-top: -10px;">（模型数据量较大，首次渲染请耐心等待约 3-8 秒）</p>
+    </div>
     
-    <!-- 隔离舱（沙盒） -->
+    <!-- 顶层沙盒，一开始就是透明可见的 -->
     <iframe id="app-frame" src=""></iframe>
 
     <script>
@@ -40,7 +39,7 @@
         var lastPage = sessionStorage.getItem('myCurrentPage');
         var targetPage = '';
 
-        // 2. 决定路由
+        // 2. 决定路由 (A/B 切换)
         if (!lastPage || lastPage === 'B') {
             targetPage = 'page_a.html';
             sessionStorage.setItem('myCurrentPage', 'A');
@@ -49,22 +48,27 @@
             sessionStorage.setItem('myCurrentPage', 'B');
         }
 
-        // 3. 组装强行击穿缓存的 URL
-        var timestamp = new Date().getTime();
-        var fetchUrl = './' + targetPage + '?v=' + timestamp;
-
-        // 4. 将沙盒的地址指向大文件
         var iframe = document.getElementById('app-frame');
-        var loading = document.getElementById('loading');
+        
+        // 3. 击穿缓存，开始加载大文件
+        var timestamp = new Date().getTime();
+        iframe.src = './' + targetPage + '?v=' + timestamp;
 
-        // 当大文件在沙盒里加载完毕时，隐藏提示语，展示画面
+        // 4. 【核心黑魔法：暴力保底机制】
+        // 不管 page_b 有没有彻底加载完，3秒钟后强制隐藏背后的提示字，并给沙盒铺上白底
+        // 防止透明背景导致文字和网页重叠
+        setTimeout(function() {
+            var loader = document.getElementById('loading-box');
+            if(loader) loader.style.display = 'none';
+            iframe.style.backgroundColor = '#ffffff'; 
+        }, 3000);
+
+        // 如果页面加载得快，立刻隐藏提示字
         iframe.onload = function() {
-            loading.style.display = 'none';
-            iframe.style.display = 'block';
+            var loader = document.getElementById('loading-box');
+            if(loader) loader.style.display = 'none';
+            iframe.style.backgroundColor = '#ffffff';
         };
-
-        // 触发加载
-        iframe.src = fetchUrl;
     </script>
 </body>
 </html>
