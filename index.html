@@ -2,49 +2,70 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>江头锦苑价值评估入口</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f8fafc; }
+        .loading-text { text-align: center; color: #64748b; margin-top: 50px; }
+        .error-box { text-align: center; margin-top: 100px; color: #ef4444; }
+    </style>
 </head>
 <body>
-    <p style="text-align: center; color: #64748b; margin-top: 50px;">正在为您加载最优测算模型...</p>
+    <p class="loading-text">正在为您加载最优测算模型...</p>
 
     <script>
-        // 1. 读取浏览器记忆
-        var lastPage = sessionStorage.getItem('myCurrentPage');
-        var targetPage = '';
+        try {
+            // 1. 读取浏览器记忆 (状态机)
+            var lastPage = sessionStorage.getItem('myCurrentPage');
+            var targetPage = '';
 
-        // 2. 判断这次该显示 A 还是 B
-        if (!lastPage || lastPage === 'B') {
-            targetPage = 'page_a.html';
-            sessionStorage.setItem('myCurrentPage', 'A');
-        } else {
-            targetPage = 'page_b.html';
-            sessionStorage.setItem('myCurrentPage', 'B');
+            // 2. 轮询分发策略 (A/B 切换)
+            if (!lastPage || lastPage === 'B') {
+                targetPage = 'page_a.html';
+                sessionStorage.setItem('myCurrentPage', 'A');
+            } else {
+                targetPage = 'page_b.html';
+                sessionStorage.setItem('myCurrentPage', 'B');
+            }
+
+            // 3. 加入时间戳，强行击穿 CDN 缓存
+            var timestamp = new Date().getTime(); 
+            var fetchUrl = './' + targetPage + '?v=' + timestamp;
+
+            // 4. 异步拉取与DOM重写
+            fetch(fetchUrl)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error("HTTP请求被拒绝，状态码: " + response.status);
+                    }
+                    return response.text();
+                })
+                .then(function(html) {
+                    // 严格校验是否取到了假页面(GitHub的404报错页)
+                    if (html.indexOf("404") !== -1 || html.indexOf("Not Found") !== -1) {
+                        throw new Error("文件未找到(404)");
+                    }
+                    
+                    // 原地重写，实现无痕替换
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(function(err) {
+                    // 捕获到错误时，降级显示极简错误面板
+                    console.error('加载链路断开:', err);
+                    document.body.innerHTML = 
+                        '<div class="error-box">' +
+                            '<h3 style="font-size: 24px; margin-bottom: 10px;">系统加载异常</h3>' +
+                            '<p>无法获取底层测算模型 (目标路由: ' + targetPage + ')</p>' +
+                            '<p style="font-size:14px; color:#666; margin-top:20px;">底层抛错: ' + err.message + '</p>' +
+                        '</div>';
+                });
+
+        } catch (e) {
+            // 终极防御：如果以上代码自身发生崩溃，直接把错抛到屏幕上
+            document.body.innerHTML = '<div class="error-box">系统内核错误: ' + e.message + '</div>';
         }
-
-        // 3. 【核心黑魔法】去后台拉取代码，并“原地重写”整个网页！
-        fetch('./' + targetPage)
-            .then(function(response) {
-                return response.text();
-            })
-            .then(function(html) {
-                // 如果 fetch 成功，但返回的是 404 网页（GitHub的默认404）
-                if (html.includes("404") || html.includes("Not Found")) {
-                    throw new Error("文件未找到");
-                }
-                document.open();
-                document.write(html);
-                document.close();
-            })
-            .catch(function(err) {
-                console.error('加载失败:', err);
-                // 发生错误时，给用户一个体面的降级显示
-                document.body.innerHTML = `
-                    <div style="text-align: center; margin-top: 100px; color: #ef4444;">
-                        <h3 style="font-size: 24px; margin-bottom: 10px;">系统加载异常</h3>
-                        <p>无法获取测算模型 (目标文件: ${targetPage})<br>请检查该文件是否已成功上传至同级目录。</p>
-                    </div>
-                `;
-            });
     </script>
 </body>
 </html>
