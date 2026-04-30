@@ -5,67 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>江头锦苑价值评估入口</title>
     <style>
-        body { font-family: sans-serif; background-color: #f8fafc; }
-        .loading-text { text-align: center; color: #64748b; margin-top: 50px; }
-        .error-box { text-align: center; margin-top: 100px; color: #ef4444; }
+        /* 让底层页面和边框消失，伪装成原生页面 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* 防止出现双重滚动条 */
+            background-color: #f8fafc;
+        }
+        #app-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none; /* 加载完再显示，防止闪烁 */
+        }
+        .loading-text {
+            text-align: center;
+            color: #64748b;
+            margin-top: 50vh;
+            transform: translateY(-50%);
+            font-family: sans-serif;
+        }
     </style>
 </head>
 <body>
-    <p class="loading-text">正在为您加载最优测算模型...</p>
+    <!-- 过渡动画 -->
+    <div id="loading" class="loading-text">正在为您加载最优测算模型...</div>
+    
+    <!-- 隔离舱（沙盒） -->
+    <iframe id="app-frame" src=""></iframe>
 
     <script>
-        try {
-            // 1. 读取浏览器记忆 (状态机)
-            var lastPage = sessionStorage.getItem('myCurrentPage');
-            var targetPage = '';
+        // 1. 读取浏览器记忆
+        var lastPage = sessionStorage.getItem('myCurrentPage');
+        var targetPage = '';
 
-            // 2. 轮询分发策略 (A/B 切换)
-            if (!lastPage || lastPage === 'B') {
-                targetPage = 'page_a.html';
-                sessionStorage.setItem('myCurrentPage', 'A');
-            } else {
-                targetPage = 'page_b.html';
-                sessionStorage.setItem('myCurrentPage', 'B');
-            }
-
-            // 3. 加入时间戳，强行击穿 CDN 缓存
-            var timestamp = new Date().getTime(); 
-            var fetchUrl = './' + targetPage + '?v=' + timestamp;
-
-            // 4. 异步拉取与DOM重写
-            fetch(fetchUrl)
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error("HTTP请求被拒绝，状态码: " + response.status);
-                    }
-                    return response.text();
-                })
-                .then(function(html) {
-                    // 严格校验是否取到了假页面(GitHub的404报错页)
-                    if (html.indexOf("404") !== -1 || html.indexOf("Not Found") !== -1) {
-                        throw new Error("文件未找到(404)");
-                    }
-                    
-                    // 原地重写，实现无痕替换
-                    document.open();
-                    document.write(html);
-                    document.close();
-                })
-                .catch(function(err) {
-                    // 捕获到错误时，降级显示极简错误面板
-                    console.error('加载链路断开:', err);
-                    document.body.innerHTML = 
-                        '<div class="error-box">' +
-                            '<h3 style="font-size: 24px; margin-bottom: 10px;">系统加载异常</h3>' +
-                            '<p>无法获取底层测算模型 (目标路由: ' + targetPage + ')</p>' +
-                            '<p style="font-size:14px; color:#666; margin-top:20px;">底层抛错: ' + err.message + '</p>' +
-                        '</div>';
-                });
-
-        } catch (e) {
-            // 终极防御：如果以上代码自身发生崩溃，直接把错抛到屏幕上
-            document.body.innerHTML = '<div class="error-box">系统内核错误: ' + e.message + '</div>';
+        // 2. 决定路由
+        if (!lastPage || lastPage === 'B') {
+            targetPage = 'page_a.html';
+            sessionStorage.setItem('myCurrentPage', 'A');
+        } else {
+            targetPage = 'page_b.html';
+            sessionStorage.setItem('myCurrentPage', 'B');
         }
+
+        // 3. 组装强行击穿缓存的 URL
+        var timestamp = new Date().getTime();
+        var fetchUrl = './' + targetPage + '?v=' + timestamp;
+
+        // 4. 将沙盒的地址指向大文件
+        var iframe = document.getElementById('app-frame');
+        var loading = document.getElementById('loading');
+
+        // 当大文件在沙盒里加载完毕时，隐藏提示语，展示画面
+        iframe.onload = function() {
+            loading.style.display = 'none';
+            iframe.style.display = 'block';
+        };
+
+        // 触发加载
+        iframe.src = fetchUrl;
     </script>
 </body>
 </html>
