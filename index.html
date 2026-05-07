@@ -10,7 +10,7 @@
             margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f8fafc; 
         }
         
-        /* 核心改动：不再隐藏 iframe，一开始就直接展示！ */
+        /* 顶层沙盒，一开始就是透明可见的 */
         #app-frame {
             width: 100%; height: 100%; border: none;
             display: block; position: relative; z-index: 2;
@@ -37,13 +37,13 @@
         var lastPage = sessionStorage.getItem('myCurrentPage');
         var targetPage = '';
 
-        // 2. 决定路由 (A/B 切换)
-        if (!lastPage || lastPage === 'B') {
-            targetPage = 'page_a.html';
-            sessionStorage.setItem('myCurrentPage', 'A');
-        } else {
+        // 2. 路由逻辑反转：如果没记忆（第一次来）或者是 A，就展示最好看的 B！
+        if (!lastPage || lastPage === 'A') {
             targetPage = 'page_b.html';
             sessionStorage.setItem('myCurrentPage', 'B');
+        } else {
+            targetPage = 'page_a.html';
+            sessionStorage.setItem('myCurrentPage', 'A');
         }
 
         var iframe = document.getElementById('app-frame');
