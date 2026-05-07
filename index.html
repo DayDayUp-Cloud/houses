@@ -10,7 +10,7 @@
             margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #f8fafc; 
         }
         
-        /* 核心改动：不再隐藏 iframe，一开始就直接展示！ */
+        /* 顶层沙盒，一开始就是直接可见的 */
         #app-frame {
             width: 100%; height: 100%; border: none;
             display: block; position: relative; z-index: 2;
@@ -25,13 +25,11 @@
     </style>
 </head>
 <body>
-    <!-- 底层提示语 -->
     <div id="loading-box">
         <p>正在为您加载最优测算模型...</p>
         <p style="font-size: 13px; color: #94a3b8; margin-top: -10px;">（模型数据量较大，首次渲染请耐心等待约 3-8 秒）</p>
     </div>
     
-    <!-- 顶层沙盒，一开始就是透明可见的 -->
     <iframe id="app-frame" src=""></iframe>
 
     <script>
@@ -39,24 +37,23 @@
         var lastPage = sessionStorage.getItem('myCurrentPage');
         var targetPage = '';
 
-        // 2. 决定路由 (A/B 切换)
-        if (!lastPage || lastPage === 'B') {
-            targetPage = 'page_a.html';
-            sessionStorage.setItem('myCurrentPage', 'A');
-        } else {
+        // 2. 路由逻辑反转：第一次访问或上次是A，则指向最好看的B！
+        if (!lastPage || lastPage === 'A') {
             targetPage = 'page_b.html';
             sessionStorage.setItem('myCurrentPage', 'B');
+        } else {
+            targetPage = 'page_a.html';
+            sessionStorage.setItem('myCurrentPage', 'A');
         }
 
         var iframe = document.getElementById('app-frame');
         
-        // 3. 击穿缓存，开始加载大文件
+        // 3. 击穿缓存，开始加载文件
         var timestamp = new Date().getTime();
         iframe.src = './' + targetPage + '?v=' + timestamp;
 
         // 4. 【核心黑魔法：暴力保底机制】
-        // 不管 page_b 有没有彻底加载完，3秒钟后强制隐藏背后的提示字，并给沙盒铺上白底
-        // 防止透明背景导致文字和网页重叠
+        // 3秒钟后强制隐藏背后的提示字，并给沙盒铺上白底
         setTimeout(function() {
             var loader = document.getElementById('loading-box');
             if(loader) loader.style.display = 'none';
